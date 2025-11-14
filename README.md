@@ -1,36 +1,25 @@
-# Rspack project
+# 贪吃蛇小游戏
 
-## Setup
-
-Install the dependencies:
+## 下载依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
-## Get started
+## 启动项目
 
-Start the dev server, and the app will be available at <http://localhost:8080>.
+热重载
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
-Build the app for production:
+打包
 
 ```bash
-npm run build
+pnpm run build
 ```
 
-Preview the production build locally:
+## 描述
 
-```bash
-npm run preview
-```
-
-## Learn more
-
-To learn more about Rspack, check out the following resources:
-
-- [Rspack documentation](https://rspack.rs) - explore Rspack features and APIs.
-- [Rspack GitHub repository](https://github.com/web-infra-dev/rspack) - your feedback and contributions are welcome!
+作为练手的贪吃蛇小项目
