@@ -3,9 +3,13 @@ import PlayBoard from './components/play-board.vue';
 </script>
 
 <template>
-  <div>
+  <div class="app">
     <PlayBoard />
   </div>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.app {
+  margin: auto;
+}
+</style>
