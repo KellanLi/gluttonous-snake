@@ -67,7 +67,7 @@ watch(snakeStatus.pos, (newPos) => {
     ny < 0 ||
     ny >= itemsMatrix.length ||
     nx < 0 ||
-    nx > itemsMatrix[ny].length
+    nx >= itemsMatrix[ny].length
   ) {
     gameOver('蛇触墙');
     return;
