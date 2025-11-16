@@ -1,18 +1,36 @@
 <script setup lang="ts">
-import { CSSProperties, onMounted, reactive } from 'vue';
-import { config } from '../const';
-import { PosT } from '../type';
+import {
+  CSSProperties,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
+import { config, Direction, Speed, ItemType } from '../const';
+import { PosT, ItemTypeT, DirectionT } from '../type';
 
 const { initialValue } = config;
 
-const ItemType = Object.freeze({
-  EMPTY: 0,
-  SNAKE_BODY: 1,
-  SNAKE_HEAD: 2,
-  FOOD: 3,
-});
+const boardContainerStyle: CSSProperties = {
+  gridTemplateColumns: `repeat(${config.width}, 1fr)`,
+  gridTemplateRows: `repeat(${config.height}, 1fr)`,
+};
 
-type ItemTypeT = (typeof ItemType)[keyof typeof ItemType];
+interface SnakeStatusI {
+  direction: DirectionT;
+  pos: PosT[];
+}
+
+const timer = ref<number>();
+
+/**
+ * 用来持有蛇移动状态的对象
+ */
+const snakeStatus = reactive<SnakeStatusI>({
+  direction: initialValue.direction,
+  pos: initialValue.snakePos,
+});
 
 /**
  * 用来存储元素类型的矩阵，0为空、1为蛇身、2为蛇头、3为食物
@@ -28,17 +46,117 @@ const updateMatrix = (pos: PosT, itemType: ItemTypeT) => {
   itemsMatrix[x][y] = itemType;
 };
 
-const boardContainerStyle: CSSProperties = {
-  gridTemplateColumns: `repeat(${config.width}, 1fr)`,
-  gridTemplateRows: `repeat(${config.height}, 1fr)`,
+const cleanMatrix = () => {
+  for (let i = 0; i < itemsMatrix.length; i++) {
+    for (let j = 0; j < itemsMatrix[i].length; j++) {
+      itemsMatrix[i][j] = ItemType.EMPTY;
+    }
+  }
+};
+
+const gameOver = (msg: string = '') => {
+  if (msg) alert(msg);
+  snakeStatus.pos = initialValue.snakePos;
+  snakeStatus.direction = initialValue.direction;
+  clearInterval(timer.value);
+};
+
+watch(snakeStatus.pos, (newPos) => {
+  const [ny, nx] = newPos[0];
+  if (
+    ny < 0 ||
+    ny >= itemsMatrix.length ||
+    nx < 0 ||
+    nx > itemsMatrix[ny].length
+  ) {
+    gameOver('蛇触墙');
+    return;
+  }
+
+  for (let i = 0; i < newPos.slice(1).length; i++) {
+    const [by, bx] = newPos.slice(1)[i];
+    if (by === ny && bx === nx) {
+      gameOver('蛇触碰到自己身体');
+      return;
+    }
+  }
+
+  cleanMatrix();
+  newPos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
+});
+
+const onGoUp = () => {
+  const [hy, hx] = snakeStatus.pos[0];
+  if (itemsMatrix[hy - 1][hx] === ItemType.SNAKE) {
+    return;
+  }
+
+  snakeStatus.direction = Direction.UP;
+};
+
+const onGoLeft = () => {
+  const [hy, hx] = snakeStatus.pos[0];
+  if (itemsMatrix[hy][hx - 1] === ItemType.SNAKE) {
+    return;
+  }
+
+  snakeStatus.direction = Direction.LEFT;
+};
+
+const onGoDown = () => {
+  const [hy, hx] = snakeStatus.pos[0];
+  if (itemsMatrix[hy + 1][hx] === ItemType.SNAKE) {
+    return;
+  }
+  snakeStatus.direction = Direction.DOWN;
+};
+
+const onGoRight = () => {
+  const [hy, hx] = snakeStatus.pos[0];
+  if (itemsMatrix[hy][hx + 1] === ItemType.SNAKE) {
+    return;
+  }
+  snakeStatus.direction = Direction.RIGHT;
 };
 
 onMounted(() => {
   // 挂载时初始化蛇的位置
-  updateMatrix(initialValue.snakeHeadPos, ItemType.SNAKE_HEAD);
-  initialValue.snakeBodyPos.forEach((pos) =>
-    updateMatrix(pos, ItemType.SNAKE_BODY),
-  );
+  initialValue.snakePos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
+  document.addEventListener('keydown', (event) => {
+    const EventMap: Record<string, () => void> = {
+      w: onGoUp,
+      a: onGoLeft,
+      s: onGoDown,
+      d: onGoRight,
+    };
+
+    if (!Object.keys(EventMap).includes(event.key)) return;
+
+    EventMap[event.key]();
+  });
+
+  timer.value = setInterval(() => {
+    snakeStatus.pos.pop();
+    const [hy, hx] = snakeStatus.pos[0];
+    switch (snakeStatus.direction) {
+      case Direction.UP:
+        snakeStatus.pos.unshift([hy - 1, hx]);
+        break;
+      case Direction.DOWN:
+        snakeStatus.pos.unshift([hy + 1, hx]);
+        break;
+      case Direction.LEFT:
+        snakeStatus.pos.unshift([hy, hx - 1]);
+        break;
+      case Direction.RIGHT:
+        snakeStatus.pos.unshift([hy, hx + 1]);
+        break;
+    }
+  }, 1000 / Speed.SLOW);
+});
+
+onUnmounted(() => {
+  gameOver();
 });
 </script>
 
@@ -52,8 +170,7 @@ onMounted(() => {
             :key="`${outerIndex}${innerIndex}${value}`"
             class="item"
             :class="{
-              'item-snake':
-                value === ItemType.SNAKE_BODY || value === ItemType.SNAKE_HEAD,
+              'item-snake': value === ItemType.SNAKE,
             }"
           />
         </template>
