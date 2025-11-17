@@ -300,7 +300,7 @@ onMounted(() => {
   document.addEventListener('keydown', onKeydown);
   document.addEventListener('touchstart', onTouchstart);
   document.addEventListener('touchend', onTouchend);
-
+  document.addEventListener('touchmove', (ev) => ev.preventDefault());
   startGame();
 });
 
@@ -359,7 +359,6 @@ onUnmounted(() => {
 
   &__item-container {
     display: grid;
-    gap: 2px;
     position: absolute;
     top: 0;
     left: 0;
