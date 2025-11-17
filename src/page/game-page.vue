@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  computed,
   CSSProperties,
   onMounted,
   onUnmounted,
@@ -7,8 +8,12 @@ import {
   ref,
   watch,
 } from 'vue';
-import { config, Direction, Speed, ItemType } from '../const';
-import { PosT, ItemTypeT, DirectionT } from '../type';
+import { config, Direction, ItemType, GameState } from '../const';
+import { PosT, ItemTypeT, DirectionT, GetEnumType } from '../type';
+import router from '../router';
+
+const params = router.currentRoute.value.params;
+const speed = Number(params.speed);
 
 const { initialValue } = config;
 
@@ -22,7 +27,27 @@ interface SnakeStatusI {
   pos: PosT[];
 }
 
+interface DialogProps {
+  title: string;
+  content?: string;
+  btns: {
+    text: string;
+    onClick: () => void;
+  }[];
+}
+
+const gameStatus = ref<GetEnumType<typeof GameState>>(GameState.PLAYING);
 const timer = ref<number>();
+const showDialog = computed(() => {
+  const showDialogStatus: GetEnumType<typeof GameState>[] = [GameState.GAME_OVER, GameState.PAUSE];
+  return showDialogStatus.includes(gameStatus.value);
+});
+
+const dialogProps = ref<DialogProps>({
+  title: '游戏结束',
+  content: '',
+  btns: [],
+});
 
 /**
  * 用来持有蛇移动状态的对象
@@ -65,10 +90,35 @@ const generateFood = () => {
   updateMatrix([y, x], ItemType.FOOD);
 }
 
-const gameOver = (msg: string = '') => {
-  if (msg) alert(msg);
+const initBoard = () => {
+  cleanMatrix();
   snakeStatus.pos = initialValue.snakePos;
   snakeStatus.direction = initialValue.direction;
+  generateFood();
+}
+
+const gameOver = (msg: string = '') => {
+  gameStatus.value = GameState.GAME_OVER;
+  dialogProps.value = {
+    title: '游戏结束',
+    content: msg,
+    btns: [
+      {
+        text: '重新开始',
+        onClick: () => {
+          gameStatus.value = GameState.PLAYING;
+          initBoard();
+          startGame();
+        },
+      },
+      {
+        text: '回到首页',
+        onClick: () => {
+          router.push('/');
+        },
+      }
+    ],
+  };
   clearInterval(timer.value);
 };
 
@@ -98,8 +148,13 @@ watch(() => snakeStatus.pos, (newPos, oldPos) => {
     generateFood();
   }
 
-  oldPos.forEach((pos) => updateMatrix(pos, ItemType.EMPTY));
-  newPos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
+  try {
+    oldPos.forEach((pos) => updateMatrix(pos, ItemType.EMPTY));
+    newPos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
+  } catch (error) {
+    console.log('pos', oldPos, newPos);
+    console.log(error);
+  }
 });
 
 const onGoUp = () => {
@@ -140,23 +195,34 @@ const onGoRight = () => {
   snakeStatus.direction = Direction.RIGHT;
 };
 
-onMounted(() => {
-  // 挂载时初始化蛇的位置
-  initialValue.snakePos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
-  generateFood();
-  document.addEventListener('keydown', (event) => {
-    const EventMap: Record<string, () => void> = {
-      w: onGoUp,
-      a: onGoLeft,
-      s: onGoDown,
-      d: onGoRight,
-    };
+const pauseGame = () => {
+  gameStatus.value = GameState.PAUSE;
 
-    if (!Object.keys(EventMap).includes(event.key)) return;
+  dialogProps.value = {
+    title: '游戏暂停',
+    content: '',
+    btns: [
+      {
+        text: '继续',
+        onClick: () => {
+          startGame();
+        },
+      },
+      {
+        text: '回到首页',
+        onClick: () => {
+          router.push('/');
+        },
+      }
+    ],
+  };
 
-    EventMap[event.key]();
-  });
+  clearInterval(timer.value);
+}
 
+const startGame = () => {
+  gameStatus.value = GameState.PLAYING;
+  clearInterval(timer.value);
   timer.value = setInterval(() => {
     const snakeRestPos = snakeStatus.pos.slice(0, -1);
     const [hy, hx] = snakeStatus.pos[0];
@@ -174,7 +240,35 @@ onMounted(() => {
         snakeStatus.pos = [[hy, hx + 1], ...snakeRestPos]
         break;
     }
-  }, 600 / Speed.SLOW);
+  }, 600 / speed);
+}
+
+const onClickBoard = () => {
+  if (gameStatus.value === GameState.PLAYING) {
+    pauseGame();
+    gameStatus.value = GameState.PAUSE;
+  } else {
+    startGame();
+    gameStatus.value = GameState.PLAYING;
+  }
+}
+
+onMounted(() => {
+  generateFood();
+  document.addEventListener('keydown', (event) => {
+    const EventMap: Record<string, () => void> = {
+      w: onGoUp,
+      a: onGoLeft,
+      s: onGoDown,
+      d: onGoRight,
+    };
+
+    if (!Object.keys(EventMap).includes(event.key)) return;
+
+    EventMap[event.key]();
+  });
+
+  startGame();
 });
 
 onUnmounted(() => {
@@ -183,7 +277,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="board">
+  <div class="board" @click="onClickBoard">
     <div class="board__inner">
       <div class="board__item-container" :style="boardContainerStyle">
         <template v-for="(rows, outerIndex) in itemsMatrix">
@@ -196,6 +290,18 @@ onUnmounted(() => {
               'item-food': value === ItemType.FOOD
             }"
           />
+        </template>
+      </div>
+    </div>
+  </div>
+  <div class="dialog" v-if="showDialog">
+    <div class="dialog__mask" />
+    <div class="dialog__body">
+      <div class="dialog__body__title">{{ dialogProps.title }}</div>
+      <div class="dialog__body__content">{{ dialogProps.content }}</div>
+      <div class="dialog__body__btns">
+        <template v-for="btn in dialogProps.btns" :key="btn.text">
+          <div class="dialog__btn" @click="btn.onClick">{{ btn.text }}</div>
         </template>
       </div>
     </div>
@@ -234,6 +340,86 @@ onUnmounted(() => {
 
     .item-food {
       background-color: rgba(255, 0, 0, 0.7);
+    }
+  }
+}
+
+.dialog {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 1000;
+
+  &__mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+  }
+
+  &__body {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 690px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    &__title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    &__content {
+      font-size: 14px;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    &__btns {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      width: 100%;
+      margin-top: 20px;
+
+      .primary {
+        background-color: #333;
+        color: #fff;
+      }
+
+      .default {
+        background-color: #fff;
+        color: #333;
+      }
+
+      .dialog__btn {
+        padding: 1px 15px;
+        background-color: #fff;
+        color: #333;
+        border-radius: 10px;
+        text-align: center;
+        line-height: 40px;
+        cursor: pointer;
+      }
+
     }
   }
 }

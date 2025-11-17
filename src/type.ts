@@ -1,6 +1,6 @@
 import { Direction, ItemType, Speed } from './const';
 
-type GetEnumType<EnumObject> = EnumObject[keyof EnumObject];
+export type GetEnumType<EnumObject> = EnumObject[keyof EnumObject];
 
 export type PosT = [number, number];
 

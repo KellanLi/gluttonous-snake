@@ -1,5 +1,13 @@
 import { PosT } from './type';
 
+/** 游戏状态 */
+export const GameState = Object.freeze({
+  INIT: 0,
+  PLAYING: 1,
+  PAUSE: 2,
+  GAME_OVER: 3,
+});
+
 /** 面板元素类型 */
 export const ItemType = Object.freeze({
   EMPTY: 0,

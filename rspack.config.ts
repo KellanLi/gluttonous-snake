@@ -13,6 +13,12 @@ export default defineConfig({
   entry: {
     main: './src/main.ts',
   },
+  output: {
+    publicPath: '/',
+  },
+  devServer: {
+    historyApiFallback: true,
+  },
   resolve: {
     extensions: ['...', '.ts', '.vue'],
   },
