@@ -315,20 +315,22 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="board" @click="pauseGame" @touchstart="pauseGame">
-    <div class="board__inner">
-      <div class="board__item-container" :style="boardContainerStyle">
-        <template v-for="(rows, outerIndex) in itemsMatrix">
-          <div
-            v-for="(value, innerIndex) in rows"
-            :key="`${outerIndex}${innerIndex}${value}`"
-            class="item"
-            :class="{
-              'item-snake': value === ItemType.SNAKE,
-              'item-food': value === ItemType.FOOD,
-            }"
-          />
-        </template>
+  <div class="container">
+    <div class="board" @click="pauseGame" @touchstart="pauseGame">
+      <div class="board__inner">
+        <div class="board__item-container" :style="boardContainerStyle">
+          <template v-for="(rows, outerIndex) in itemsMatrix">
+            <div
+              v-for="(value, innerIndex) in rows"
+              :key="`${outerIndex}${innerIndex}${value}`"
+              class="item"
+              :class="{
+                'item-snake': value === ItemType.SNAKE,
+                'item-food': value === ItemType.FOOD,
+              }"
+            />
+          </template>
+        </div>
       </div>
     </div>
   </div>
@@ -349,6 +351,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="less">
+.container {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .board {
   border: solid 5px rgba(0, 0, 0, 0.7);
   width: 90vw;

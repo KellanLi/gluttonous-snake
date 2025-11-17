@@ -44,11 +44,12 @@ const clickFast = () => router.push({
 
 <style lang="less" scoped>
 .home-page {
-  height: 100vh;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
   &__board {
-    margin: auto;
-    margin-top: 20vh;
     width: calc(90vw - 40px);
     max-width: 650px;
     border: solid 5px rgba(0, 0, 0, 0.7);
