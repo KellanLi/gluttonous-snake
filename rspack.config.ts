@@ -5,6 +5,7 @@ import {
   type SwcLoaderOptions,
 } from '@rspack/core';
 import { VueLoaderPlugin } from 'vue-loader';
+import path from 'path';
 
 // Target browsers, see: https://github.com/browserslist/browserslist
 const targets = ['last 2 versions', '> 0.2%', 'not dead', 'Firefox ESR'];
@@ -15,6 +16,7 @@ export default defineConfig({
   },
   output: {
     publicPath: '/',
+    path: path.resolve(__dirname, './docs'),
   },
   devServer: {
     historyApiFallback: true,
