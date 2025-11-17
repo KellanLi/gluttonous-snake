@@ -300,7 +300,9 @@ onMounted(() => {
   document.addEventListener('keydown', onKeydown);
   document.addEventListener('touchstart', onTouchstart);
   document.addEventListener('touchend', onTouchend);
-  document.addEventListener('touchmove', (ev) => ev.preventDefault());
+  document.body.addEventListener('touchmove', (ev) => ev.preventDefault(), {
+    passive: false,
+  });
   startGame();
 });
 
@@ -337,7 +339,9 @@ onUnmounted(() => {
       <div class="dialog__body__content">{{ dialogProps.content }}</div>
       <div class="dialog__body__btns">
         <template v-for="btn in dialogProps.btns" :key="btn.text">
-          <div class="dialog__btn" @click="btn.onClick" @touchend="btn.onClick">{{ btn.text }}</div>
+          <div class="dialog__btn" @click="btn.onClick" @touchend="btn.onClick">
+            {{ btn.text }}
+          </div>
         </template>
       </div>
     </div>
