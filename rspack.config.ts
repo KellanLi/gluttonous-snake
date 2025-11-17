@@ -15,7 +15,6 @@ export default defineConfig({
     main: './src/main.ts',
   },
   output: {
-    publicPath: '/',
     path: path.resolve(__dirname, './docs'),
   },
   devServer: {
