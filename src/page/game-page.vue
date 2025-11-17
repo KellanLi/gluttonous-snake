@@ -39,7 +39,10 @@ interface DialogProps {
 const gameStatus = ref<GetEnumType<typeof GameState>>(GameState.PLAYING);
 const timer = ref<number>();
 const showDialog = computed(() => {
-  const showDialogStatus: GetEnumType<typeof GameState>[] = [GameState.GAME_OVER, GameState.PAUSE];
+  const showDialogStatus: GetEnumType<typeof GameState>[] = [
+    GameState.GAME_OVER,
+    GameState.PAUSE,
+  ];
   return showDialogStatus.includes(gameStatus.value);
 });
 
@@ -66,7 +69,9 @@ const itemsMatrix = reactive<ItemTypeT[][]>(
     .map(() => Array(config.width).fill(ItemType.EMPTY)),
 );
 
-const allMatrixMapIndex = Array(config.height*config.width).fill(null).map((_, index) => index + 1);
+const allMatrixMapIndex = Array(config.height * config.width)
+  .fill(null)
+  .map((_, index) => index + 1);
 
 const updateMatrix = (pos: PosT, itemType: ItemTypeT) => {
   const [x, y] = pos;
@@ -83,19 +88,21 @@ const cleanMatrix = () => {
 
 const generateFood = () => {
   const mapSnakeIndex = snakeStatus.pos.map(([y, x]) => y * config.width + x);
-  const spareMapIndex = allMatrixMapIndex.filter((index) => !mapSnakeIndex.includes(index));
+  const spareMapIndex = allMatrixMapIndex.filter(
+    (index) => !mapSnakeIndex.includes(index),
+  );
   const randomIndex = Math.floor(Math.random() * spareMapIndex.length);
   const y = Math.floor(spareMapIndex[randomIndex] / config.width);
   const x = spareMapIndex[randomIndex] % config.width;
   updateMatrix([y, x], ItemType.FOOD);
-}
+};
 
 const initBoard = () => {
   cleanMatrix();
   snakeStatus.pos = initialValue.snakePos;
   snakeStatus.direction = initialValue.direction;
   generateFood();
-}
+};
 
 const gameOver = (msg: string = '') => {
   gameStatus.value = GameState.GAME_OVER;
@@ -116,46 +123,48 @@ const gameOver = (msg: string = '') => {
         onClick: () => {
           router.push('/');
         },
-      }
+      },
     ],
   };
   clearInterval(timer.value);
 };
 
-watch(() => snakeStatus.pos, (newPos, oldPos) => {
-  
-  const [ny, nx] = newPos[0];
-  if (
-    ny < 0 ||
-    ny >= itemsMatrix.length ||
-    nx < 0 ||
-    nx >= itemsMatrix[ny].length
-  ) {
-    gameOver('蛇触墙');
-    return;
-  }
-
-  for (let i = 0; i < newPos.slice(1).length; i++) {
-    const [by, bx] = newPos.slice(1)[i];
-    if (by === ny && bx === nx) {
-      gameOver('蛇触碰到自己身体');
+watch(
+  () => snakeStatus.pos,
+  (newPos, oldPos) => {
+    const [ny, nx] = newPos[0];
+    if (
+      ny < 0 ||
+      ny >= itemsMatrix.length ||
+      nx < 0 ||
+      nx >= itemsMatrix[ny].length
+    ) {
+      gameOver('蛇触墙');
       return;
     }
-  }
 
-  if (itemsMatrix[ny][nx] === ItemType.FOOD) {
-    snakeStatus.pos = [...snakeStatus.pos, oldPos[oldPos.length - 1]];
-    generateFood();
-  }
+    for (let i = 0; i < newPos.slice(1).length; i++) {
+      const [by, bx] = newPos.slice(1)[i];
+      if (by === ny && bx === nx) {
+        gameOver('蛇触碰到自己身体');
+        return;
+      }
+    }
 
-  try {
-    oldPos.forEach((pos) => updateMatrix(pos, ItemType.EMPTY));
-    newPos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
-  } catch (error) {
-    console.log('pos', oldPos, newPos);
-    console.log(error);
-  }
-});
+    if (itemsMatrix[ny][nx] === ItemType.FOOD) {
+      snakeStatus.pos = [...snakeStatus.pos, oldPos[oldPos.length - 1]];
+      generateFood();
+    }
+
+    try {
+      oldPos.forEach((pos) => updateMatrix(pos, ItemType.EMPTY));
+      newPos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
+    } catch (error) {
+      console.log('pos', oldPos, newPos);
+      console.log(error);
+    }
+  },
+);
 
 const onGoUp = () => {
   const [hy, hx] = snakeStatus.pos[0];
@@ -213,12 +222,12 @@ const pauseGame = () => {
         onClick: () => {
           router.push('/');
         },
-      }
+      },
     ],
   };
 
   clearInterval(timer.value);
-}
+};
 
 const startGame = () => {
   gameStatus.value = GameState.PLAYING;
@@ -228,56 +237,83 @@ const startGame = () => {
     const [hy, hx] = snakeStatus.pos[0];
     switch (snakeStatus.direction) {
       case Direction.UP:
-        snakeStatus.pos = [[hy - 1, hx], ...snakeRestPos]
+        snakeStatus.pos = [[hy - 1, hx], ...snakeRestPos];
         break;
       case Direction.DOWN:
-        snakeStatus.pos = [[hy + 1, hx], ...snakeRestPos]
+        snakeStatus.pos = [[hy + 1, hx], ...snakeRestPos];
         break;
       case Direction.LEFT:
-        snakeStatus.pos = [[hy, hx - 1], ...snakeRestPos]
+        snakeStatus.pos = [[hy, hx - 1], ...snakeRestPos];
         break;
       case Direction.RIGHT:
-        snakeStatus.pos = [[hy, hx + 1], ...snakeRestPos]
+        snakeStatus.pos = [[hy, hx + 1], ...snakeRestPos];
         break;
     }
   }, 600 / speed);
-}
+};
 
-const onClickBoard = () => {
-  if (gameStatus.value === GameState.PLAYING) {
-    pauseGame();
-    gameStatus.value = GameState.PAUSE;
+const onKeydown = (event: KeyboardEvent) => {
+  const EventMap: Record<string, () => void> = {
+    w: onGoUp,
+    a: onGoLeft,
+    s: onGoDown,
+    d: onGoRight,
+  };
+
+  if (!Object.keys(EventMap).includes(event.key)) return;
+
+  EventMap[event.key]();
+};
+
+let startX = 0;
+let startY = 0;
+
+const onTouchstart = (ev: TouchEvent) => {
+  ev.preventDefault();
+  startX = ev.touches[0].clientX;
+  startY = ev.touches[0].clientY;
+};
+
+const onTouchend = (ev: TouchEvent) => {
+  ev.preventDefault();
+  const endX = ev.changedTouches[0].clientX;
+  const endY = ev.changedTouches[0].clientY;
+  const diffX = endX - startX;
+  const diffY = endY - startY;
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+    if (diffX > 0) {
+      onGoRight();
+    } else {
+      onGoLeft();
+    }
   } else {
-    startGame();
-    gameStatus.value = GameState.PLAYING;
+    if (diffY > 0) {
+      onGoDown();
+    } else {
+      onGoUp();
+    }
   }
-}
+};
 
 onMounted(() => {
   generateFood();
-  document.addEventListener('keydown', (event) => {
-    const EventMap: Record<string, () => void> = {
-      w: onGoUp,
-      a: onGoLeft,
-      s: onGoDown,
-      d: onGoRight,
-    };
-
-    if (!Object.keys(EventMap).includes(event.key)) return;
-
-    EventMap[event.key]();
-  });
+  document.addEventListener('keydown', onKeydown);
+  document.addEventListener('touchstart', onTouchstart);
+  document.addEventListener('touchend', onTouchend);
 
   startGame();
 });
 
 onUnmounted(() => {
-  gameOver();
+  clearInterval(timer.value);
+  document.removeEventListener('keydown', onKeydown);
+  document.removeEventListener('touchstart', onTouchstart);
+  document.removeEventListener('touchend', onTouchend);
 });
 </script>
 
 <template>
-  <div class="board" @click="onClickBoard">
+  <div class="board" @click="pauseGame" @touchstart="pauseGame">
     <div class="board__inner">
       <div class="board__item-container" :style="boardContainerStyle">
         <template v-for="(rows, outerIndex) in itemsMatrix">
@@ -287,7 +323,7 @@ onUnmounted(() => {
             class="item"
             :class="{
               'item-snake': value === ItemType.SNAKE,
-              'item-food': value === ItemType.FOOD
+              'item-food': value === ItemType.FOOD,
             }"
           />
         </template>
@@ -301,7 +337,7 @@ onUnmounted(() => {
       <div class="dialog__body__content">{{ dialogProps.content }}</div>
       <div class="dialog__body__btns">
         <template v-for="btn in dialogProps.btns" :key="btn.text">
-          <div class="dialog__btn" @click="btn.onClick">{{ btn.text }}</div>
+          <div class="dialog__btn" @click="btn.onClick" @touchend="btn.onClick">{{ btn.text }}</div>
         </template>
       </div>
     </div>
@@ -419,7 +455,6 @@ onUnmounted(() => {
         line-height: 40px;
         cursor: pointer;
       }
-
     }
   }
 }
