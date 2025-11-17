@@ -41,6 +41,8 @@ const itemsMatrix = reactive<ItemTypeT[][]>(
     .map(() => Array(config.width).fill(ItemType.EMPTY)),
 );
 
+const allMatrixMapIndex = Array(config.height*config.width).fill(null).map((_, index) => index + 1);
+
 const updateMatrix = (pos: PosT, itemType: ItemTypeT) => {
   const [x, y] = pos;
   itemsMatrix[x][y] = itemType;
@@ -54,6 +56,15 @@ const cleanMatrix = () => {
   }
 };
 
+const generateFood = () => {
+  const mapSnakeIndex = snakeStatus.pos.map(([y, x]) => y * config.width + x);
+  const spareMapIndex = allMatrixMapIndex.filter((index) => !mapSnakeIndex.includes(index));
+  const randomIndex = Math.floor(Math.random() * spareMapIndex.length);
+  const y = Math.floor(spareMapIndex[randomIndex] / config.width);
+  const x = spareMapIndex[randomIndex] % config.width;
+  updateMatrix([y, x], ItemType.FOOD);
+}
+
 const gameOver = (msg: string = '') => {
   if (msg) alert(msg);
   snakeStatus.pos = initialValue.snakePos;
@@ -61,7 +72,8 @@ const gameOver = (msg: string = '') => {
   clearInterval(timer.value);
 };
 
-watch(snakeStatus.pos, (newPos) => {
+watch(() => snakeStatus.pos, (newPos, oldPos) => {
+  
   const [ny, nx] = newPos[0];
   if (
     ny < 0 ||
@@ -81,13 +93,19 @@ watch(snakeStatus.pos, (newPos) => {
     }
   }
 
-  cleanMatrix();
+  if (itemsMatrix[ny][nx] === ItemType.FOOD) {
+    snakeStatus.pos = [...snakeStatus.pos, oldPos[oldPos.length - 1]];
+    generateFood();
+  }
+
+  oldPos.forEach((pos) => updateMatrix(pos, ItemType.EMPTY));
   newPos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
 });
 
 const onGoUp = () => {
   const [hy, hx] = snakeStatus.pos[0];
-  if (itemsMatrix[hy - 1][hx] === ItemType.SNAKE) {
+  const [ny, nx] = snakeStatus.pos[1];
+  if (hy - 1 === ny && hx === nx) {
     return;
   }
 
@@ -96,7 +114,8 @@ const onGoUp = () => {
 
 const onGoLeft = () => {
   const [hy, hx] = snakeStatus.pos[0];
-  if (itemsMatrix[hy][hx - 1] === ItemType.SNAKE) {
+  const [ny, nx] = snakeStatus.pos[1];
+  if (hy === ny && hx - 1 === nx) {
     return;
   }
 
@@ -105,7 +124,8 @@ const onGoLeft = () => {
 
 const onGoDown = () => {
   const [hy, hx] = snakeStatus.pos[0];
-  if (itemsMatrix[hy + 1][hx] === ItemType.SNAKE) {
+  const [ny, nx] = snakeStatus.pos[1];
+  if (hy + 1 === ny && hx === nx) {
     return;
   }
   snakeStatus.direction = Direction.DOWN;
@@ -113,7 +133,8 @@ const onGoDown = () => {
 
 const onGoRight = () => {
   const [hy, hx] = snakeStatus.pos[0];
-  if (itemsMatrix[hy][hx + 1] === ItemType.SNAKE) {
+  const [ny, nx] = snakeStatus.pos[1];
+  if (hy === ny && hx + 1 === nx) {
     return;
   }
   snakeStatus.direction = Direction.RIGHT;
@@ -122,6 +143,7 @@ const onGoRight = () => {
 onMounted(() => {
   // 挂载时初始化蛇的位置
   initialValue.snakePos.forEach((pos) => updateMatrix(pos, ItemType.SNAKE));
+  generateFood();
   document.addEventListener('keydown', (event) => {
     const EventMap: Record<string, () => void> = {
       w: onGoUp,
@@ -136,23 +158,23 @@ onMounted(() => {
   });
 
   timer.value = setInterval(() => {
-    snakeStatus.pos.pop();
+    const snakeRestPos = snakeStatus.pos.slice(0, -1);
     const [hy, hx] = snakeStatus.pos[0];
     switch (snakeStatus.direction) {
       case Direction.UP:
-        snakeStatus.pos.unshift([hy - 1, hx]);
+        snakeStatus.pos = [[hy - 1, hx], ...snakeRestPos]
         break;
       case Direction.DOWN:
-        snakeStatus.pos.unshift([hy + 1, hx]);
+        snakeStatus.pos = [[hy + 1, hx], ...snakeRestPos]
         break;
       case Direction.LEFT:
-        snakeStatus.pos.unshift([hy, hx - 1]);
+        snakeStatus.pos = [[hy, hx - 1], ...snakeRestPos]
         break;
       case Direction.RIGHT:
-        snakeStatus.pos.unshift([hy, hx + 1]);
+        snakeStatus.pos = [[hy, hx + 1], ...snakeRestPos]
         break;
     }
-  }, 1000 / Speed.SLOW);
+  }, 600 / Speed.SLOW);
 });
 
 onUnmounted(() => {
@@ -171,6 +193,7 @@ onUnmounted(() => {
             class="item"
             :class="{
               'item-snake': value === ItemType.SNAKE,
+              'item-food': value === ItemType.FOOD
             }"
           />
         </template>
@@ -207,6 +230,10 @@ onUnmounted(() => {
 
     .item-snake {
       background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .item-food {
+      background-color: rgba(255, 0, 0, 0.7);
     }
   }
 }
